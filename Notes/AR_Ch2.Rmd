@@ -1,0 +1,101 @@
+---
+title: "Advanced R Chapter 2"
+subtitle: "9/12/2025"
+output: html_notebook
+---
+
+## 2: Names and Values
+
+### 2.1 Introduction
+
+```{r}
+library(lobstr)
+```
+
+### 2.2: Binding Basics
+
+```{r}
+x <- c(1, 2, 3)
+```
+
+-   It’s creating an object, a vector of values, `c(1, 2, 3)`.
+
+-   And it’s binding that object to a name, `x`
+
+```{r}
+y <- x
+```
+
+-   you don’t get another copy of the value `c(1, 2, 3)`, you get another binding to the existing object
+
+### Exercises
+
+1.  Explain the relationship between `a`, `b`, `c` and `d` in the following code:
+
+```{r}
+a <- 1:10
+b <- a
+c <- b
+d <- 1:10
+```
+
+2.  The following code accesses the mean function in multiple ways. Do they all point to the same underlying function object? Verify this with [`lobstr::obj_addr()`](https://lobstr.r-lib.org/reference/obj_addr.html).
+
+```{r}
+mean
+base::mean
+get("mean")
+evalq(mean)
+match.fun("mean")
+lobstr::obj_addr()
+```
+
+3)  By default, base R data import functions, like [`read.csv()`](https://rdrr.io/r/utils/read.table.html), will automatically convert non-syntactic names to syntactic ones. Why might this be problematic? What option allows you to suppress this behavior?
+
+-   if the name begins with \_ or a number or a reserved word, you will get an error message
+-   backticks \`\` around the name can suppress
+
+4)  What rules does make.names() use to convert non-syntactic names into syntactic ones?
+
+-   The character `"X"` is prepended if necessary. All invalid characters are translated to `"."`. A missing value is translated to `"NA"`. Names which match **R** keywords have a dot appended to them. Duplicated values are altered by [`make.unique`](http://127.0.0.1:14395/help/library/base/help/make.unique).
+
+4)  I slightly simplified the rules that govern syntactic names. Why is .123e1 not a syntactic name? Read ?make.names for the full details.
+
+-   It starts with a dot followed by a number
+
+### 2.3: Copy-on-Modify
+
+Consider the following code. It binds `x` and `y` to the same underlying value, then modifies `y.`
+
+```{r}
+x <- c(1, 2, 3)
+y <- x
+
+y[[3]] <- 4
+x
+y
+#> [1] 1 2 3
+```
+
+Modifying `y` clearly didn’t modify `x`. So what happened to the shared binding? While the value associated with `y` changed, the original object did not. Instead, R created a new object, `0xcd2`, a copy of `0x74b` with one value changed, then rebound `y` to that object. This behavior is called **copy-on-modify.**
+
+You can see when an object gets copied with the help of [`base::tracemem()`](https://rdrr.io/r/base/tracemem.html). Once you call that function with an object, you’ll get the object’s current address:
+
+```{r}
+x <- c(1, 2, 3)
+cat(tracemem(x), "\n")
+```
+
+From then on, whenever that object is copied, [`tracemem()`](https://rdrr.io/r/base/tracemem.html) will print a message telling you which object was copied, its new address, and the sequence of calls that led to the copy. If you modify `y` again, it won’t get copied. That’s because the new object now only has a single name bound to it, so R applies modify-in-place optimisation. We’ll come back to this in Section [2.5](https://adv-r.hadley.nz/names-values.html#modify-in-place).
+
+**Lists**
+
+It’s not just names (i.e. variables) that point to values; elements of lists do too. Consider this list, which is superficially very similar to the numeric vector above. This list is more complex because instead of storing the values itself, it stores references to them.
+
+```{r}
+l1 <- list(1, 2, 3)
+l2 <- l1
+l2[[3]] <- 4
+```
+
+This, however, is a **shallow** copy: the list object and its bindings are copied, but the values pointed to by the bindings are not. The opposite of a shallow copy is a deep copy where the contents of every reference are copied. To see values that are shared across lists, use [`lobstr::ref()`](https://lobstr.r-lib.org/reference/ref.html). [`ref()`](https://lobstr.r-lib.org/reference/ref.html) prints the memory address of each object, along with a local ID so that you can easily cross-reference shared components.

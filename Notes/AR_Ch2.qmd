@@ -1,0 +1,177 @@
+---
+title: "Names_and_Values"
+format: html
+---
+
+[Advanced R Chapter 2: Names and Values](https://adv-r.hadley.nz/names-values.html)
+
+```{r}
+
+```
+
+## 2: Names and Values
+
+### 2.1 Introduction
+
+```{r}
+library(lobstr)
+```
+
+### 2.2: Binding Basics
+
+```{r}
+x <- c(1, 2, 3)
+y <- x
+```
+
+-   `c(1, 2, 3)` is an object, a vector of values
+-   that object binds to a name, x
+-   Think of a name as a reference to a value
+-   y is not a copy of the value c(1, 2, 3), it is another binding to the existing object
+
+#### Object Identifier: lobstr::obj_addr()
+
+```{r}
+#obj_addr(x)
+#obj_addr(y)
+```
+
+#### 2.2.1 Non-syntactic names
+
+```{r}
+#syntactic name consists of letters, digits, . and _ 
+#can't begin with _ or a digit
+
+#override using backticks `` makenames()
+
+#check reserved words with ?reserved
+```
+
+### 2.3 Copy-on-modify
+
+```{r}
+x <- c(1, 2, 3)
+y <- x
+
+y[[3]] <- 4 #when y is modified, r creates a new object, a copy of x with a value changed, and rebounds y to that object
+x
+y
+#modifying y does not modify x
+```
+
+#### 2.3.1 tracemem()
+
+```{r}
+x <- c(1, 2, 3)
+cat(tracemem(x), "\n")
+
+#after adding tracing to x, when that object is copied, tracemem() will print a message telling you which object was copied, its new address, and the sequence of calls
+
+y <- x
+y[[3]] <- 4L #this is when x was copied
+
+
+# if you modify y again, it won't get copied because the new object now only has a single name bound to it, so R applied modify-in-place optimisation
+
+# untracemem() turns tracing off
+# untracemem(x)
+
+```
+
+#### 2.3.2 Function Calls
+
+```{r}
+#copying rules also apply to function calls
+
+f <- function(a) {
+  a
+}
+
+x <- c(1, 2, 3)
+cat(tracemem(x), "\n")
+
+z<- f(x)
+# there's no copy here!
+
+# untracemem(x)
+```
+
+#### 2.3.3 Lists
+
+```{r}
+# this is a list
+l1 <- list(1, 2, 3)
+# instead of storing the values itself, the list stores references to them
+
+l2 <- l1
+l2[[3]] <- 4 # modifying a list
+l1
+l2
+# l1 is unchanged, and l2 is a modified copy
+# l2 is a shallow copy. the list objects and its bindings are copied, but the values pointed to by the bindings ase not
+
+#to see values shared across lists, use lobstr::ref()
+ref(l1, l2)
+# █ [1:0x256981b85f8] <list> 
+# ├─[2:0x256958a1b40] <dbl> 
+# ├─[3:0x256958a1b08] <dbl> 
+# └─[4:0x256958a1ad0] <dbl> 
+ 
+# █ [5:0x25698efff08] <list> #this is the name of the list
+# ├─[2:0x256958a1b40] 
+# ├─[3:0x256958a1b08] 
+# └─[6:0x25695ce3fb8] <dbl> #this is [[4]], the only value that is different
+```
+
+#### 2.3.4 Data Frames
+
+```{r}
+# data frames are lists of vectors
+d1 <- data.frame(x = c(1, 5, 6), y = c(2, 4, 3))
+d1
+d2 <- d1
+d2[, 2] <- d2[, 2] * 2 #if you mody a column, only that column needs to be modified
+d2
+```
+
+## Quiz
+
+1.  Given the following data frame, how do I create a new column called “3” that contains the sum of `1` and `2`? You may only use `$`, not `[[`. What makes `1`, `2`, and `3` challenging as variable names?
+
+```{r}
+df <- data.frame(runif(3), runif(3))
+names(df) <- c(1, 2)
+```
+
+Answer
+
+```{r}
+df$`3` <- df$`1` + df$`2`
+```
+
+2.  In the following code, how much memory does `y` occupy?
+
+```{r}
+x <- runif(1e6)
+y <- list(x, x, x)
+```
+
+Answer
+
+```{r}
+obj_size(y)
+```
+
+-   8 MB
+
+2.  On which line does `a` get copied in the following example?
+
+```{r}
+a <- c(1, 5, 3, 2)
+b <- a
+b[[1]] <- 10
+```
+
+Answer
+
+-    `a` is copied when `b` is modified, b\[\[1\]\] \<- 10.

@@ -7,6 +7,8 @@ editor: visual
 
 This is an individual assignment. Turn in this assignment as an HTML or PDF file to ELMS. Make sure to include the R Markdown or Quarto file that was used to generate it. Include the GitHub link for the repository containing these files.
 
+[GitHub link to repository](https://github.com/blackburn2616/SURV727)
+
 ```{r}
 #| include: false 
 library(tidyverse)

@@ -51,12 +51,12 @@ Information on the \`crime\` table can be found here:
 
 <https://cloud.google.com/bigquery/public-data/chicago-crime-data>
 
-Write a first query that counts the number of rows of the \`crime\` table in the year 2016. Use code chunks with {sql connection = con} in order to write SQL code within the document.
+Write a first query that counts the number of rows of the \`crime\` table in the year 2015. Use code chunks with {sql connection = con} in order to write SQL code within the document.
 
 ```{sql connection = con}
 SELECT count(primary_type) AS primary_count, count(*) AS overall_count -- counting non-missing primary count and overall
 FROM crime 
-WHERE year = 2016 
+WHERE year = 2015 
 LIMIT 10;
 ```
 
@@ -92,7 +92,7 @@ FROM crime
 WHERE primary_type = 'HOMICIDE' AND arrest = TRUE
 GROUP BY year
 ORDER BY homicide_arrest_count DESC
-LIMIT 30;
+LIMIT 10;
 ```
 
 Find out which districts have the highest numbers of arrests in 2015 and 2016. That is, count the number of arrests in 2015 and 2016, grouped by year and district. List the results in descending order.
@@ -102,27 +102,81 @@ SELECT year, district, count(arrest) AS arrest_count
 FROM crime 
 WHERE (year = 2015 AND arrest = TRUE) OR (year = 2016 AND arrest = TRUE)
 GROUP BY year, district
-ORDER BY arrest_count DESC 
+ORDER BY district, arrest_count DESC
 LIMIT 10;
 ```
+
+-   Based on the announcement example on campus, I added district to ORDER BY. Based on just the question wording, I would've left it out and arranged descending by arrest count.
 
 Lets switch to writing queries from within R via the `DBI` package. Create a query object that counts the number of arrests grouped by `primary_type` of district 11 in year 2016. The results should be displayed in descending order.
 
 ```{r}
-
+sql <- "SELECT count(arrest) AS arrest_count, primary_type
+        FROM `bigquery-public-data.chicago_crime.crime` 
+        WHERE year = 2016 AND arrest = TRUE AND district = 11
+        GROUP BY primary_type
+        ORDER BY arrest_count DESC
+        LIMIT 10"
 ```
 
 Execute the query.
 
+```{r}
+dbGetQuery(con, sql)
+```
+
 Try to write the very same query, now using the `dbplyr` package. For this, you need to first map the `crime` table to a tibble object in R.
+
+```{r}
+crim <- tbl(con, "crime")
+str(crim)
+class(crim)
+```
 
 Again, count the number of arrests grouped by `primary_type` of district 11 in year 2016, now using `dplyr` syntax.
 
+```{r}
+crim |> 
+  select(arrest, primary_type, year, district) |> 
+  filter(year == 2016, arrest == TRUE, district == 11) |> 
+  group_by(primary_type) |> 
+  summarise(arrest_count = n()) |> 
+  arrange(desc(arrest_count)) |> 
+  head(10)
+```
+
 Count the number of arrests grouped by `primary_type` and `year`, still only for district 11. Arrange the result by `year`.
+
+```{r}
+crim |> 
+  select(arrest, primary_type, year, district) |> 
+  filter(arrest == TRUE, district == 11) |> 
+  group_by(primary_type, year) |> 
+  summarise(arrest_count = n()) |> 
+  arrange(year) |> 
+  head(10)
+```
 
 Assign the results of the query above to a local R object.
 
+```{r}
+object <-
+  crim |> 
+  select(arrest, primary_type, year, district) |> 
+  filter(arrest == TRUE, district == 11) |> 
+  group_by(primary_type, year) |> 
+  summarise(arrest_count = n()) |> 
+  arrange(year) |> 
+  head(10) |> 
+  collect()
+```
+
 Confirm that you pulled the data to the local environment by displaying the first ten rows of the saved data set.
+
+```{r}
+object |> 
+  slice_head(n = 10)
+```
 
 Close the connection.
 
